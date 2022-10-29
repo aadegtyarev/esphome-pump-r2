@@ -1,0 +1,59 @@
+# Константы для удобства настроек.
+substitutions:
+  name: esp-pump-r2
+  friendly_name: pump-r2
+  project: Sonoff Mini R2
+  sensor_gpio: GPIO04 # GPIO, к которому подключен датчик расхода воды
+  relay_gpio: GPIO12 # GPIO к которому подключено реле
+
+# Описание платы, в моём реле стоит esp8285.
+esphome:
+  name: ${name}
+  platform: ESP8266
+  board: esp8285
+
+# Чтобы обновлять прошивку по воздуху.
+ota:
+  password: "ваш_пароль_ota"
+
+# Подключение к Wi-Fi
+wifi:
+  ssid: "WB-LAB"
+  password: "ваш_пароль_wifi"
+  ap:
+    ssid: Fallback ${name}
+    password: "ваш_пароль_резервная_точка_доступа"
+
+# Если не получится подключиться к Wi-Fi,
+# то поднять свой веб-интерфейс с логином
+# и паролем указанным выше в разделе «ap:».
+captive_portal:
+
+# Датчик расхода воды
+sensor:
+  - platform: pulse_counter
+    name: "Flow Sensor"
+    id: flow_sensor
+    pin:
+      number: $sensor_gpio
+      mode: INPUT_PULLUP
+    unit_of_measurement: "impulses"
+    update_interval: 500ms
+# Если датчик расхода присылает больше 100 имульсов,
+# то включаем реле, иначе — выключаем.
+    on_value:
+      if:
+        condition:
+          sensor.in_range:
+            id: flow_sensor
+            above: 100.0
+        then:
+          - output.turn_on: pump_relay
+        else:
+          - output.turn_off: pump_relay
+
+# Выход реле
+output:
+  - platform: gpio
+    id: pump_relay
+    pin: $relay_gpio
